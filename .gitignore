@@ -3,6 +3,8 @@ conf/*
 scripts/*
 !scripts/google_trends.py
 !scripts/settings_dummy.yaml
+output/*
+!output/.gitkeep
 __pycache__
 .DS_Store
 derby.log
