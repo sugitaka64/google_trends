@@ -18,6 +18,7 @@ from datetime import datetime
 from datetime import timedelta
 from docopt import docopt
 import os
+import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from pytrends.request import TrendReq
@@ -29,6 +30,7 @@ class GetDataFromGTrends(object):
 
     def run(
         self,
+        project_name: str,
         start_date: datetime.date,
         end_date: datetime.date,
         keywords: list,
@@ -38,7 +40,8 @@ class GetDataFromGTrends(object):
         """execute."""
 
         # output file
-        output_file_name_fmt = '%s.csv'
+        utf8_output_file_name = '%s_utf8.csv' % (project_name)
+        sjis_output_file_name = '%s.csv' % (project_name)
         now = datetime.now().strftime('%Y%m%d%H%M%S')
 
         # term
@@ -86,32 +89,40 @@ class GetDataFromGTrends(object):
         for keyword in keywords:
             # get data from google trend
             pytrend.build_payload(kw_list=[keyword], geo='JP', timeframe=term)
-            df = pytrend.interest_over_time()
+            df_part = pytrend.interest_over_time()[keyword]
 
-            # set file path
-            output_file_name = output_file_name_fmt % (
-                keyword.replace(' ', '_'),
-            )
-            output_file_path = output_dir_path + output_file_name
+            # merge dataframe
+            if 'df' in locals():
+                df = pd.concat([df, df_part], axis=1)
+            else:
+                df = df_part
 
-            # write to csv
-            df[keyword].to_csv(output_file_path, index=True, header=True)
+        # set file path
+        utf8_output_file_path = output_dir_path + utf8_output_file_name
+        sjis_output_file_path = output_dir_path + sjis_output_file_name
 
-            # send to google drive
-            f = drive.CreateFile(
-                {
-                    'title': output_file_name,
-                    'mimeType': 'text/csv',
-                    'parents': [
-                        {
-                            'kind': 'drive#fileLink',
-                            'id': target_folder_id,
-                        }
-                    ],
-                }
-            )
-            f.SetContentFile(output_file_path)
-            f.Upload()
+        # write to csv
+        df.to_csv(utf8_output_file_path, index=True, header=True)
+        # encode
+        with open(sjis_output_file_path, 'w', encoding='cp932') as f_out:
+            with open(utf8_output_file_path, 'r', encoding='utf-8') as f_in:
+                f_out.write(f_in.read())
+
+        # send to google drive
+        f = drive.CreateFile(
+            {
+                'title': sjis_output_file_name,
+                'mimeType': 'text/csv',
+                'parents': [
+                    {
+                        'kind': 'drive#fileLink',
+                        'id': target_folder_id,
+                    }
+                ],
+            }
+        )
+        f.SetContentFile(sjis_output_file_path)
+        f.Upload()
 
         return True
 
@@ -157,10 +168,12 @@ if __name__ == '__main__':
     if end_date == 'yesterday':
         end_date = date.today() - timedelta(1)
     keywords = setting_data['keywords']
+    project_name = setting_data['project_name']
 
     # run
     gdfgt = GetDataFromGTrends()
     gdfgt.run(
+        project_name,
         start_date,
         end_date,
         keywords,
