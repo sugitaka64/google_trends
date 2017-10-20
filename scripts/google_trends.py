@@ -5,7 +5,7 @@
 
 Usage:
     google_trends.py
-        --setting_file_path=<setting_file_path>
+        --conf_file_path=<conf_file_path>
         --output_dir_path=<output_dir_path>
     google_trends.py -h | --help
 
@@ -17,7 +17,6 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from docopt import docopt
-import os
 import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
@@ -38,7 +37,6 @@ class GetDataFromGTrends(object):
         output_dir_path: str,
     ) -> bool:
         """execute."""
-
         # output file
         utf8_output_file_name = '%s_utf8.csv' % (project_name)
         sjis_output_file_name = '%s.csv' % (project_name)
@@ -92,10 +90,11 @@ class GetDataFromGTrends(object):
             df_part = pytrend.interest_over_time()[keyword]
 
             # merge dataframe
-            if 'df' in locals():
-                df = pd.concat([df, df_part], axis=1)
-            else:
+            df = ''
+            if df == '':
                 df = df_part
+            else:
+                df = pd.concat([df, df_part], axis=1)
 
         # set file path
         utf8_output_file_path = output_dir_path + utf8_output_file_name
@@ -156,19 +155,19 @@ if __name__ == '__main__':
 
     # get parameters
     args = docopt(__doc__)
-    setting_file_path = args['--setting_file_path']
+    conf_file_path = args['--conf_file_path']
     output_dir_path = args['--output_dir_path']
 
     # settings
-    with open(setting_file_path) as f:
-        setting_data = yaml.load(f)
-    gd_folder_id = setting_data['gd_folder_id']
-    start_date = setting_data['start_date']
-    end_date = setting_data['end_date']
+    with open(conf_file_path) as f:
+        conf_data = yaml.load(f)
+    gd_folder_id = conf_data['gd_folder_id']
+    start_date = conf_data['start_date']
+    end_date = conf_data['end_date']
     if end_date == 'yesterday':
         end_date = date.today() - timedelta(1)
-    keywords = setting_data['keywords']
-    project_name = setting_data['project_name']
+    keywords = conf_data['keywords']
+    project_name = conf_data['project_name']
 
     # run
     gdfgt = GetDataFromGTrends()
