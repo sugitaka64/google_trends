@@ -84,17 +84,33 @@ class GetDataFromGTrends(object):
             if target_folder_id == '':
                 raise SystemError('can\'t make directory.')
 
+        df = ''
         for keyword in keywords:
             # get data from google trend
             pytrend.build_payload(kw_list=[keyword], geo='JP', timeframe=term)
             df_part = pytrend.interest_over_time()[keyword]
 
             # merge dataframe
-            df = ''
-            if df == '':
-                df = df_part
-            else:
+            if isinstance(df, pd.core.series.Series):
                 df = pd.concat([df, df_part], axis=1)
+            else:
+                df = df_part
+
+        # rename index
+        indexes = df.index
+        new_indexes = []
+        for i, v in enumerate(indexes):
+            j = i + 1
+            try:
+                w = indexes[j] - timedelta(1)
+            except IndexError:
+                w = v + timedelta(6)
+            new_index = v.strftime('%Y-%m-%d') \
+                + ' - ' \
+                + w.strftime('%Y-%m-%d')
+            new_indexes.append(new_index)
+
+        df.index = new_indexes
 
         # set file path
         utf8_output_file_path = output_dir_path + utf8_output_file_name
