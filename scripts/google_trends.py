@@ -91,7 +91,7 @@ class GetDataFromGTrends(object):
             df_part = pytrend.interest_over_time()[keyword]
 
             # merge dataframe
-            if isinstance(df, pd.core.series.Series):
+            if isinstance(df, pd.core.series.Series) or isinstance(df, pd.core.frame.DataFrame):
                 df = pd.concat([df, df_part], axis=1)
             else:
                 df = df_part
